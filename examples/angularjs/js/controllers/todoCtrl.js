@@ -12,7 +12,9 @@ angular.module('todomvc')
 		var todos = $scope.todos = store.todos;
 
 		$scope.newTodo = '';
+		$scope.newUser = '';
 		$scope.editedTodo = null;
+		$scope.editedUser = null;
 
 		$scope.$watch('todos', function () {
 			$scope.remainingCount = $filter('filter')(todos, { completed: false }).length;
@@ -31,7 +33,8 @@ angular.module('todomvc')
 		$scope.addTodo = function () {
 			var newTodo = {
 				title: $scope.newTodo.trim(),
-				completed: false
+				completed: false,
+				isTodo: true,
 			};
 
 			if (!newTodo.title) {
@@ -42,6 +45,27 @@ angular.module('todomvc')
 			store.insert(newTodo)
 				.then(function success() {
 					$scope.newTodo = '';
+				})
+				.finally(function () {
+					$scope.saving = false;
+				});
+		};
+
+		$scope.addUser = function () {
+			var newUser = {
+				title: $scope.newUser.trim(),
+				selected: false,
+				isUser: true,
+			};
+
+			if (!newUser.title) {
+				return;
+			}
+
+			$scope.saving = true;
+			store.insert(newUser)
+				.then(function success() {
+					$scope.newUser = '';
 				})
 				.finally(function () {
 					$scope.saving = false;
