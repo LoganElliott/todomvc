@@ -15,10 +15,12 @@ angular.module('todomvc')
 		$scope.newUser = '';
 		$scope.editedTodo = null;
 		$scope.editedUser = null;
+		$scope.selectedUser = null;
+		$scope.allUsers = {completed: false};
 
 		$scope.$watch('todos', function () {
-			$scope.remainingCount = $filter('filter')(todos, { completed: false }).length;
-			$scope.completedCount = todos.length - $scope.remainingCount;
+			$scope.remainingCount = $filter('filter')(todos.filter(todo => todo.isTodo), { completed: false }).length;
+			$scope.completedCount = todos.filter(todo => todo.isTodo).length - $scope.remainingCount;
 			$scope.allChecked = !$scope.remainingCount;
 		}, true);
 
@@ -35,6 +37,7 @@ angular.module('todomvc')
 				title: $scope.newTodo.trim(),
 				completed: false,
 				isTodo: true,
+				user: '',
 			};
 
 			if (!newTodo.title) {
@@ -73,12 +76,14 @@ angular.module('todomvc')
 		};
 
 		$scope.editTodo = function (todo) {
+			todo.isEditing = true;
 			$scope.editedTodo = todo;
 			// Clone the original todo to restore it on demand.
 			$scope.originalTodo = angular.extend({}, todo);
 		};
 
-		$scope.saveEdits = function (todo, event) {
+		$scope.saveEdits = function (todo, event, user) {
+			todo.isEditing = false;
 			// Blur events are automatically triggered after the form submit event.
 			// This does some unfortunate logic handling to prevent saving twice.
 			if (event === 'blur' && $scope.saveEvent === 'submit') {
@@ -96,10 +101,17 @@ angular.module('todomvc')
 
 			todo.title = todo.title.trim();
 
-			if (todo.title === $scope.originalTodo.title) {
+			let userJson = '';
+			if(user){
+				userJson = JSON.parse(user);
+			}
+
+			if (todo.title === $scope.originalTodo.title && Object.is(userJson,$scope.originalTodo.user)) {
 				$scope.editedTodo = null;
 				return;
 			}
+
+			todo.user = userJson;
 
 			store[todo.title ? 'put' : 'delete'](todo)
 				.then(function success() {}, function error() {
@@ -111,6 +123,7 @@ angular.module('todomvc')
 		};
 
 		$scope.revertEdits = function (todo) {
+			todo.isEditing = false;
 			todos[todos.indexOf(todo)] = $scope.originalTodo;
 			$scope.editedTodo = null;
 			$scope.originalTodo = null;
@@ -129,6 +142,27 @@ angular.module('todomvc')
 			if (angular.isDefined(completed)) {
 				todo.completed = completed;
 			}
+
+			// unselects previously selected user or unselects if allUsers was selected
+			if(todo.isUser){
+				if($scope.selectedUser && !Object.is($scope.selectedUser, todo)){
+					$scope.selectedUser.completed = false;
+					todos[todos.indexOf($scope.selectedUser)] = $scope.selectedUser;
+				}
+
+				if($scope.allUsers.completed){
+					$scope.allUsers.completed = false;
+				}
+
+				if($scope.selectedUser && Object.is($scope.selectedUser, todo)){
+					$scope.selectedUser = null;
+					return;
+				}
+
+				$scope.selectedUser = todo;
+				return;
+			}
+
 			store.put(todo, todos.indexOf(todo))
 				.then(function success() {}, function error() {
 					todo.completed = !todo.completed;
@@ -140,10 +174,18 @@ angular.module('todomvc')
 		};
 
 		$scope.markAll = function (completed) {
-			todos.forEach(function (todo) {
+			todos.filter(todo => todo.isTodo).forEach(function (todo) {
 				if (todo.completed !== completed) {
 					$scope.toggleCompleted(todo, completed);
 				}
 			});
 		};
+
+		$scope.toggleAllUsers = function () {
+			// unselects previously selected user
+			if($scope.selectedUser) {
+				$scope.selectedUser.completed = false;
+				todos[todos.indexOf($scope.selectedUser)] = $scope.selectedUser;
+			}
+		}
 	});

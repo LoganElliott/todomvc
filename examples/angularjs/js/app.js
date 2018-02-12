@@ -29,4 +29,12 @@ angular.module('todomvc', ['ngRoute', 'ngResource'])
 			.otherwise({
 				redirectTo: '/'
 			});
+	})
+	.filter('filterByUser', () => {
+		return (todos, selectedUser) => {
+			if(selectedUser){
+				return todos.filter(todo => selectedUser.title === todo.user.title && selectedUser.isUser === todo.user.isUser);
+			}
+			return todos;
+		}
 	});
